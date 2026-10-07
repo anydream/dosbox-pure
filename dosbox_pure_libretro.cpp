@@ -1420,6 +1420,7 @@ static std::vector<std::string>& DBP_ScanSystem(bool force_midi_scan)
 			{
 				dbp_shellzips.emplace_back(path.assign(subdir).append(subdir.length() ? "/" : "").append(entry_name));
 			}
+			#ifndef DBP_STANDALONE
 			else if (ln == 23 && !subdir.length() && !force_midi_scan && !strcasecmp(entry_name, "DOSBoxPureMidiCache.txt"))
 			{
 				std::string content;
@@ -1442,10 +1443,12 @@ static std::vector<std::string>& DBP_ScanSystem(bool force_midi_scan)
 				subdirs.clear();
 				break;
 			}
+			#endif
 		}
 		vfs.iface->closedir(dir);
 	}
 
+	#ifndef DBP_STANDALONE
 	retro_time_t system_scan_time = (time_cb() - scan_start);
 	if (force_midi_scan || (system_scan_time > 2000000 && !dbp_system_cached))
 	{
@@ -1464,6 +1467,8 @@ static std::vector<std::string>& DBP_ScanSystem(bool force_midi_scan)
 		}
 		if (force_midi_scan) DBP_QueueEvent(DBPET_REFRESHSYSTEM, DBP_NO_PORT);
 	}
+	#endif
+
 	return dynstr;
 }
 
@@ -2137,12 +2142,13 @@ static void set_variables(bool force_midi_scan = false)
 			def.values[i++] = { dynstr[f].c_str(), dynstr[f+1].c_str() };
 	#ifndef DBP_STANDALONE
 	def.values[i++] = { "frontend", "Frontend MIDI driver" };
-	#else
-	def.values[i++] = { "system", "System MIDI driver" };
-	#endif
 	def.values[i++] = { "disabled", "Disabled" };
 	if (dbp_system_cached)
 		def.values[i++] = { "scan", (!strcmp(DBP_Option::Get(DBP_Option::midi), "scan") ? "System directory scan finished" : "Scan System directory for soundfonts (open this menu again after)") };
+	#else
+	def.values[i++] = { "system", "System MIDI driver" };
+	def.values[i++] = { "disabled", "Disabled" };
+	#endif
 	def.values[i] = { 0, 0 };
 	def.default_value = def.values[0].value;
 
@@ -2281,6 +2287,7 @@ static bool check_variables()
 	// Depending on this we call set_variables, which needs to be done before any DBP_Option::SetDisplay call
 	bool midi_changed = false;
 	const char* midi = DBP_Option::Get(DBP_Option::midi, &midi_changed);
+	#ifndef DBP_STANDALONE
 	if (dbp_system_cached)
 	{
 		if (!strcmp(midi, "scan"))
@@ -2295,6 +2302,7 @@ static bool check_variables()
 			dbp_system_scannable = true;
 		}
 	}
+	#endif
 
 	char buf[32];
 	unsigned options_ver = 0;
