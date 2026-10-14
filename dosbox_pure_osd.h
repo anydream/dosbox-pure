@@ -1357,7 +1357,7 @@ struct DBP_PureMenuState final : DBP_MenuState
 			else { DBP_ASSERT(false); }
 			if (DBP_Run::autoboot.startup.mode == DBP_Run::RUN_VARIANT) DBP_Run::autoboot.use = false; // DBP_Run::WriteAutoBoot force enables auto boot for RUN_VARIANT
 		}
-		else if (patchDrive::variants.Len()) RefreshList(IT_VARIANTLIST);
+		else if (DBP_Run::patch.show_variants) RefreshList(IT_VARIANTLIST);
 		open_ticks = DBP_GetTicks(); // avoid very slow RefreshList causing this to be too long ago already
 	}
 
@@ -1544,7 +1544,7 @@ struct DBP_PureMenuState final : DBP_MenuState
 			if (dbp_game_running) AddFSRow(IT_SAVELOAD,  0, "[ Saving & Loading ]", (!boot_rows++)); // todo
 			#endif
 
-			if (patchDrive::variants.Len())
+			if (DBP_Run::patch.show_variants)
 			{
 				AddFSRow(IT_NONE, INFO_WARN, "Active Configuration: ", true);
 				list.back().str.append(!DBP_Run::patch.enabled_variant ? "Default" : patchDrive::variants.GetStorage()[DBP_Run::patch.enabled_variant - 1].c_str());
@@ -1566,7 +1566,7 @@ struct DBP_PureMenuState final : DBP_MenuState
 			}
 			if (exe_count) list.emplace_back(IT_NONE);
 
-			if (DBP_FullscreenOSD || (cd_count + hd_count) <= 1) setsel = (patchDrive::variants.Len() ? (fs_rows - 2) : (exe_count ? fs_rows : (int)dbp_images.size()));
+			if (DBP_FullscreenOSD || (cd_count + hd_count) <= 1) setsel = (DBP_Run::patch.show_variants ? (fs_rows - 2) : (exe_count ? fs_rows : (int)dbp_images.size()));
 			if (!exe_count) { list.emplace_back(IT_NONE, INFO_DIM, "No executable file found"); list.emplace_back(IT_NONE); }
 
 			if (!dbp_strict_mode) list.emplace_back(IT_COMMANDLINE, 0, "Go to Command Line");
@@ -1733,15 +1733,23 @@ struct DBP_PureMenuState final : DBP_MenuState
 			}
 			else if (DBP_Run::patch.show_default)
 			{
-				list.emplace(list.begin() + secbegin, IT_VARIANTRUN, 0, "Default"); // no sections, add default start
+				list.emplace(list.begin() + secbegin, IT_VARIANTRUN, 0, (patchDrive::variants.Len() ? "Default" : "Run Game")); // no sections, add default start
 				setsel = (setsel ? (setsel + 1) : secbegin); // fix for added row
+			}
+			if (patchDrive::variants.Len())
+			{
+				list.emplace_back(IT_NONE);
+				list.emplace_back(IT_NONE, INFO_DIM, "The configuration can be switched with the On-Screen Menu");
+				#ifndef DBP_STANDALONE
+				list.emplace_back(IT_NONE, INFO_DIM, "or by holding shift or L2/R2 when restarting the core");
+				#endif
 			}
 			list.emplace_back(IT_NONE);
 			list.emplace_back(IT_MAINMENU, 0, "Run Other Program");
+			if (!DBP_FullscreenOSD) list.emplace_back(IT_CLOSEOSD, 0, "Close Menu");
+			#ifdef DBP_STANDALONE
 			list.emplace_back(IT_NONE);
-			list.emplace_back(IT_NONE, INFO_DIM, "The configuration can be switched with the On-Screen Menu");
-			#ifndef DBP_STANDALONE
-			list.emplace_back(IT_NONE, INFO_DIM, "or by holding shift or L2/R2 when restarting the core");
+			list.emplace_back(IT_EXITDBPS, 0, "Exit DOSBox Pure");
 			#endif
 		}
 		#ifdef DBP_STANDALONE
@@ -2332,7 +2340,7 @@ static void DBP_PureMenuProgram(Program** make)
 
 			DBP_FullscreenOSD = true;
 			DBP_PureMenuState* ms = new DBP_PureMenuState();
-			bool runsoloexe = (ms->exe_count == 1 && ms->fs_rows <= (int)(dbp_images.size() + 1) && !patchDrive::variants.Len());
+			bool runsoloexe = (ms->exe_count == 1 && ms->fs_rows <= (int)(dbp_images.size() + 1) && !DBP_Run::patch.show_variants);
 
 			#ifndef STATIC_LINKING
 			if (m == M_FINISH && dbp_menu_time >= 0 && dbp_menu_time < 99 && (runsoloexe || DBP_Run::autoboot.use) && (DBP_GetTicks() - dbp_lastmenuticks) >= 500)
@@ -2355,7 +2363,7 @@ static void DBP_PureMenuProgram(Program** make)
 				ms->DoInput(DBP_MenuState::RES_OK, ms->list[ms->sel].type, 0);
 				delete ms;
 			}
-			else if (m != M_BOOT || ms->exe_count != 0 || ms->fs_rows != 0 || patchDrive::variants.Len() || Drives['C'-'A'] || Drives['A'-'A'] || Drives['D'-'A'])
+			else if (m != M_BOOT || ms->exe_count != 0 || ms->fs_rows != 0 || DBP_Run::patch.show_variants || Drives['C'-'A'] || Drives['A'-'A'] || Drives['D'-'A'])
 				DBP_StartOSD(DBPOSD_MAIN, ms);
 			else
 				delete ms;

@@ -309,7 +309,7 @@ struct DBP_Run
 	static struct Startup { EMode mode = RUN_NONE; bool reboot = false; int info = 0; std::string exec; } startup;
 	static struct Autoboot { Startup startup; bool have = false, use = false; int skip = 0; Bit32u hash = 0; } autoboot;
 	static struct Autoinput { std::string str; const char* ptr = NULL; Bit32s oldcycles = 0; Bit8u oldchange = 0; Bit16s oldyear = 0; } autoinput;
-	static struct Patch { int enabled_variant = 0; bool show_default = false; } patch;
+	static struct Patch { int enabled_variant = 0; bool show_variants = false, show_default = false; } patch;
 
 	static bool Run(EMode mode, int info, std::string& str, bool from_osd = false)
 	{
@@ -329,9 +329,9 @@ struct DBP_Run
 			mode = startup.mode;
 			info = startup.info;
 			if (mode == RUN_NONE) return false; // YML had no startup
-			autoboot.use = !ymlload.is_utility; // disable autoboot for utility config
+			autoboot.use = (patchDrive::variants.Len() && !ymlload.is_utility); // disable autoboot for utility config
 			autoboot.skip = 0; // otherwise force enable auto start when switching variant
-			if (!ymlload.is_utility) WriteAutoBoot(RUN_VARIANT, patch.enabled_variant, str);
+			if (autoboot.use) WriteAutoBoot(RUN_VARIANT, patch.enabled_variant, str);
 		}
 		else
 		{
@@ -605,6 +605,7 @@ struct DBP_Run
 
 		// Show default variant as an option only if there is a auto run setting in the base root yml
 		patch.show_default = (ymlload.first_startup_mode_key && ymlload.first_startup_mode_key < patchDrive::dos_yml.c_str() + root_yml_len);
+		patch.show_variants = (ymlload.first_startup_mode_key || patchDrive::variants.Len());
 
 		// reset and re-run PreInit to set all settings of yml
 		if (ymlload.reboot) return true;
