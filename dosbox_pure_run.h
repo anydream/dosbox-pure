@@ -308,7 +308,7 @@ struct DBP_Run
 	enum EMode : Bit8u { RUN_NONE, RUN_EXEC, RUN_BOOTIMG, RUN_BOOTOS, RUN_INSTALLOS, RUN_SHELL, RUN_VARIANT, RUN_COMMANDLINE };
 	static struct Startup { EMode mode = RUN_NONE; bool reboot = false; int info = 0; std::string exec; } startup;
 	static struct Autoboot { Startup startup; bool have = false, use = false; int skip = 0; Bit32u hash = 0; } autoboot;
-	static struct Autoinput { std::string str; const char* ptr = NULL; Bit32s oldcycles = 0; Bit8u oldchange = 0; Bit16s oldyear = 0; } autoinput;
+	static struct Autoinput { std::string str; const char* ptr = NULL; } autoinput;
 	static struct Patch { int enabled_variant = 0; bool show_variants = false, show_default = false; } patch;
 
 	static bool Run(EMode mode, int info, std::string& str, bool from_osd = false)
@@ -357,16 +357,7 @@ struct DBP_Run
 		}
 
 		autoinput.ptr = ((mode != RUN_COMMANDLINE && autoinput.str.size()) ? autoinput.str.c_str() : NULL);
-		autoinput.oldcycles = 0;
-		if (autoinput.ptr && dbp_content_year > 1970 && (CPU_CycleAutoAdjust || (CPU_AutoDetermineMode & (CPU_AUTODETERMINE_CYCLES|(CPU_AUTODETERMINE_CYCLES<<CPU_AUTODETERMINE_SHIFT)))))
-		{
-			// enforce cycle rate during auto input (but limited to 1994 CPU speed, above will likely just waste time waiting for rendering out the skipped frames)
-			autoinput.oldcycles = CPU_CycleMax;
-			autoinput.oldchange = (Bit8u)control->GetProp("cpu", "cycles")->getChange();
-			autoinput.oldyear = dbp_content_year;
-			if (dbp_content_year > 1994) dbp_content_year = 1994;
-			DBP_SetCyclesByYear(dbp_content_year, 1994);
-		}
+		if (autoinput.ptr) DBP_Run::ProcessAutoInput(true);
 
 		// if a booted OS does a bios reboot, auto reboot that OS from now on
 		if (mode == RUN_EXEC || mode == RUN_COMMANDLINE)
@@ -728,17 +719,28 @@ struct DBP_Run
 
 	static Bit32u ModeHash() { return (Bit32u)((render.src.width * 2100781) ^ (render.src.height * 65173) ^ ((Bitu)(render.src.fps * 521)) ^ (render.src.bpp * 31) ^ ((Bitu)vga.mode + 1)); }
 
-	static void ProcessAutoInput()
+	static void ProcessAutoInput(bool first = false)
 	{
 		extern Bitu PIC_Ticks;
-		static Bitu InpTickStart, InpNextTick; static Bit32u InpDelay, InpReleaseKey, InpSkipMode;
-		if (autoinput.ptr == autoinput.str.c_str())
-			InpTickStart = PIC_Ticks, InpNextTick = 0, InpDelay = 70, InpReleaseKey = InpSkipMode = 0;
+		static Bitu InpTickStart, InpNextTick; static Bit32u InpDelay, InpReleaseKey, InpSkipMode, InpLastMode, InpOldCycles; static Bit16s InpOldYear; static Bit8u InpOldChange;
+		if (first)
+		{
+			InpTickStart = PIC_Ticks, InpNextTick = 0, InpDelay = 70, InpReleaseKey = InpSkipMode = InpLastMode = InpOldCycles = 0;
+			if (dbp_content_year > 1970 && (CPU_CycleAutoAdjust || (CPU_AutoDetermineMode & (CPU_AUTODETERMINE_CYCLES|(CPU_AUTODETERMINE_CYCLES<<CPU_AUTODETERMINE_SHIFT)))))
+			{
+				// enforce cycle rate during auto input (but limited to 1994 CPU speed, above will likely just waste time waiting for rendering out the skipped frames)
+				InpOldCycles = CPU_CycleMax;
+				InpOldChange = (Bit8u)control->GetProp("cpu", "cycles")->getChange();
+				InpOldYear = dbp_content_year;
+				if (dbp_content_year > 1994) dbp_content_year = 1994;
+				DBP_SetCyclesByYear(dbp_content_year, 1994);
+			}
+		}
 
 		const Bitu InpDoneTicks = PIC_Ticks - InpTickStart;
 		if (InpSkipMode && !vga.draw.resizing)
 		{
-			Bit32u mode = ModeHash();
+			const Bit32u mode = ModeHash();
 			if (InpSkipMode == mode) { } // video mode unchanged
 			else if (InpSkipMode < 31) { InpSkipMode = mode; } // initial resolution was set (before it was size 0)
 			else { InpSkipMode = 0; InpNextTick = InpDoneTicks; } // new video mode
@@ -802,9 +804,8 @@ struct DBP_Run
 			}
 			else if (i == KBD_LAST+1) // waitmodechange command
 			{
-				if (vga.draw.resizing && InpDoneTicks && (InpDoneTicks - InpNextTick < 5000)) break; // don't start while vga is resizing
 				InpNextTick += 30000; // wait max 30 seconds (if the game crashes, auto input is aborted below)
-				InpSkipMode = ModeHash();
+				InpSkipMode = ((first || !InpLastMode) ? ModeHash() : InpLastMode);
 			}
 			else if (i == KBD_LAST+2 && cmdColon) // delay command
 			{
@@ -816,6 +817,7 @@ struct DBP_Run
 			}
 			else if (i < KBD_LAST) // key press
 			{
+				if (!InpDoneTicks) { InpNextTick = 30; continue; } // wait before starting the first key press
 				if (bShift) KEYBOARD_AddKey(KBD_leftshift, true);
 				if (bAltGr) KEYBOARD_AddKey(KBD_rightalt, true);
 				KEYBOARD_AddKey((KBD_KEYS)i, true);
@@ -829,6 +831,7 @@ struct DBP_Run
 				break;
 			}
 			autoinput.ptr = cmdNext;
+			InpLastMode = (i < KBD_LAST ? ModeHash() : 0);
 		}
 
 		// Check if done, dbp_game_running should switch to true at tick 1 unless the game crashes or exits but give it 5 seconds to be sure
@@ -845,13 +848,13 @@ struct DBP_Run
 			// done
 			autoinput.ptr = NULL; // reset on game crash/exit (dbp_game_running is false)
 			DBP_KEYBOARD_ReleaseKeys();
-			if (autoinput.oldcycles)
+			if (InpOldCycles)
 			{
-				if (!CPU_CycleAutoAdjust && CPU_CycleMax == DBP_CyclesForYear(dbp_content_year, 1994) && control->GetProp("cpu", "cycles")->getChange() == autoinput.oldchange)
-					CPU_CycleMax = autoinput.oldcycles; // revert from Run()
+				if (!CPU_CycleAutoAdjust && CPU_CycleMax == DBP_CyclesForYear(dbp_content_year, 1994) && control->GetProp("cpu", "cycles")->getChange() == InpOldChange)
+					CPU_CycleMax = InpOldCycles; // revert from Run()
 				else if (CPU_CycleAutoAdjust && cpu.pmode && (CPU_AutoDetermineMode & (CPU_AUTODETERMINE_CORE<<CPU_AUTODETERMINE_SHIFT)))
-					CPU_OldCycleMax = autoinput.oldcycles; // we switched to protected mode since auto input, fix up old cycles
-				dbp_content_year = autoinput.oldyear;
+					CPU_OldCycleMax = InpOldCycles; // we switched to protected mode since auto input, fix up old cycles
+				dbp_content_year = InpOldYear;
 				DBP_SetRealModeCycles(); // if still in real mode reset the defaults
 			}
 		}
