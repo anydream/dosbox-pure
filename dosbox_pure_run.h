@@ -628,6 +628,20 @@ struct DBP_Run
 	{
 		char buf[DOS_PATHLENGTH + 32 + 256 + 256 + 2];
 		Bit16u autostrlen = DriveReadFileBytes(Drives['C'-'A'], "AUTOBOOT.DBP", (Bit8u*)buf, (Bit16u)(sizeof(buf)-1));
+		const char* layername;
+		const patchDrive* patch_drive = ((!autostrlen && patchDrive::variants.Len() && !dbp_save_name) ? dynamic_cast<patchDrive*>(Drives['C'-'A']->GetShadow(1, true)) : NULL);
+		for (int layer = 1; patch_drive && (layername = patch_drive->GetLayerName(layer)) != NULL; layer++)
+		{
+			std::string tmp = dbp_content_name;
+			dbp_content_name.assign(layername);
+			std::string parent_save_file = DBP_GetSaveFile(SFT_GAMESAVE);
+			dbp_content_name.assign(tmp);
+			if (FILE* zip_file_h = fopen_wrap(parent_save_file.c_str(), "rb"))
+			{
+				zipDrive drv(new rawFile(zip_file_h, false), false);
+				if ((autostrlen = DriveReadFileBytes(&drv, "AUTOBOOT.DBP", (Bit8u*)buf, (Bit16u)(sizeof(buf)-1))) != 0) break;
+			}
+		}
 		autoboot.have = !!autostrlen;
 
 		const char* cpath = (autostrlen ? NULL : strrchr(dbp_content_path.c_str(), '#'));

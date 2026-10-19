@@ -60,7 +60,7 @@ static retro_system_av_info av_info;
 static enum DBP_State : Bit8u { DBPSTATE_BOOT, DBPSTATE_EXITED, DBPSTATE_SHUTDOWN, DBPSTATE_REBOOT, DBPSTATE_FIRST_FRAME, DBPSTATE_RUNNING } dbp_state;
 static enum DBP_SerializeMode : Bit8u { DBPSERIALIZE_STATES, DBPSERIALIZE_REWIND, DBPSERIALIZE_DISABLED } dbp_serializemode;
 static bool dbp_game_running, dbp_pause_events, dbp_paused_midframe, dbp_frame_pending, dbp_biosreboot, dbp_biospoweroff, dbp_system_cached, dbp_system_scannable, dbp_refresh_memmaps;
-static bool dbp_optionsupdatecallback, dbp_reboot_set64mem, dbp_use_network, dbp_had_game_running, dbp_strict_mode, dbp_legacy_save, dbp_wasloaded, dbp_skip_c_mount;
+static bool dbp_optionsupdatecallback, dbp_reboot_set64mem, dbp_use_network, dbp_had_game_running, dbp_strict_mode, dbp_legacy_save, dbp_save_name, dbp_wasloaded, dbp_skip_c_mount;
 static signed char dbp_menu_time, dbp_conf_loading, dbp_reboot_machine;
 static Bit8u dbp_alphablend_base;
 static float dbp_auto_target, dbp_last_fastforward;
@@ -827,7 +827,7 @@ static std::string DBP_GetSaveFile(DBP_SaveFileType type, const char** out_filen
 			{
 				char dta_name[DOS_NAMELENGTH_ASCII]; Bit32u dta_size; Bit16u dta_date, dta_time; Bit8u dta_attr;
 				dta.GetResult(dta_name, dta_size, dta_date, dta_time, dta_attr);
-				if (drv->GetLongFileName(dta_name, savename) && (savenamelen = strlen(savename)) > 9 && !strncasecmp(savename + savenamelen - 9, ".SAVENAME", 9)) break;
+				if (drv->GetLongFileName(dta_name, savename) && (savenamelen = strlen(savename)) > 9 && !strncasecmp(savename + savenamelen - 9, ".SAVENAME", 9)) { dbp_save_name = true; break; }
 				savenamelen = 0;
 			}
 			dos.dta(save_dta);
@@ -981,13 +981,7 @@ static DOS_Drive* DBP_Mount(unsigned image_index = 0, bool unmount_existing = tr
 			// When loading a DOSC file, load the corresponding DOSZ file, but strip out a [VARIANT] specifier at the end.
 			std::string dosz_path(path);
 			dosz_path.back() = (ext[3] == 'c' ? 'z' : 'Z'); // swap dosc -> dosz with same capitalization
-			if (const char* dosc_variant = (ext[-2] == ']' ? strrchr(path_file, '[') : NULL))
-			{
-				while (dosc_variant > path_file && dosc_variant[-1] == ' ') dosc_variant--;
-				size_t dosc_variant_len = (ext - 1 - dosc_variant);
-				dosz_path.erase(dosc_variant - path, dosc_variant_len);
-			}
-			drive = zipDrive::MountWithDependencies(dosz_path.c_str(), ziperr, dbp_strict_mode, dbp_legacy_save, path);
+			drive = zipDrive::MountWithDependencies(dosz_path.c_str(), ziperr, dbp_strict_mode, dbp_legacy_save);
 		}
 		if (!drive)
 		{
@@ -2739,7 +2733,7 @@ static void init_dosbox(bool forcemenu = false, bool reinit = false, const std::
 
 	if (!dbp_skip_c_mount)
 	{
-		dbp_legacy_save = false;
+		dbp_legacy_save = dbp_save_name = false;
 		std::string save_file = DBP_GetSaveFile(SFT_GAMESAVE); // this can set dbp_legacy_save to true, needed by DBP_Mount
 		DOS_Drive* union_underlay = (path ? DBP_Mount(0, false, 0, path) : NULL);
 
