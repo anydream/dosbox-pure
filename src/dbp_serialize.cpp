@@ -270,7 +270,7 @@ void DBPSerialize_All(DBPArchive& ar, bool dos_running, bool game_running)
 	Bit64s from = __rdtsc();
 	#endif
 
-	ar.version = 8;
+	ar.version = 9;
 	if (ar.mode != DBPArchive::MODE_ZERO)
 	{
 		Bit32u magic = 0xD05B5747;
