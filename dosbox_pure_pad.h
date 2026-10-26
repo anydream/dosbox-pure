@@ -268,6 +268,7 @@ struct DBP_PadMapping
 		RefreshDosJoysticks(); // do after bindings change
 		dbp_binds_changed = 0; // this contains which ports had changes but we're just rebuilding all descriptors anyway here
 
+		#ifndef DBP_STANDALONE
 		static std::vector<std::string> input_names;
 		input_names.reserve(dbp_input_binds.size() + DBP_MAX_PORTS); // otherwise strings move their data in memory when the vector reallocates
 		input_names.clear();
@@ -301,6 +302,7 @@ struct DBP_PadMapping
 		}
 		ports[DBP_MAX_PORTS] = {0};
 		environ_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
+		#endif
 	}
 
 	static void RefreshDosJoysticks()

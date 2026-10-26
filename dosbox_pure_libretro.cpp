@@ -2707,7 +2707,7 @@ static void init_dosbox(bool forcemenu = false, bool reinit = false, const std::
 	const int path_extlen = (path ? (int)((path_fragment ? path_fragment : path + dbp_content_path.length()) - path_ext) : 0);
 	const bool newcontent = !dbp_wasloaded, force_puremenu = forcemenu || (dbp_biosreboot && dbp_wasloaded);
 	if (newcontent) dbp_biosreboot = dbp_reboot_set64mem = false; // ignore this when switching content
-	if (newcontent && !reinit) dbp_auto_mapping = NULL; // re-acquire when switching content
+	if (newcontent && !reinit) { dbp_auto_mapping = NULL; dbp_content_year = 0; } // re-acquire when switching content
 
 	// Loading a .conf file behaves like regular DOSBox (no union drive mounting, save file, start menu, etc.)
 	dbp_skip_c_mount = (path_extlen == 4 && !strncasecmp(path_ext, "conf", 4));
@@ -2824,9 +2824,6 @@ static void init_dosbox(bool forcemenu = false, bool reinit = false, const std::
 	// Always start network again when it has been used once (or maybe we're restarting to start it up the first time)
 	if (dbp_use_network) { dbp_use_network = false; DBP_EnableNetwork(); }
 
-	// Joysticks are refreshed after control modifications but needs to be done here also to happen on core restart
-	DBP_PadMapping::RefreshDosJoysticks();
-
 	// Always switch to the C: drive directly (for puremenu, to run DOSBOX.BAT and to run the autoexec of the dosbox conf)
 	// For DBP we modified init_line to always run Z:\AUTOEXEC.BAT and not just any AUTOEXEC.BAT of the current drive/directory
 	if (DOS_SetDrive('C'-'A') && autoexec) // SetDrive will fail if dbp_skip_c_mount
@@ -2872,7 +2869,7 @@ static void init_dosbox(bool forcemenu = false, bool reinit = false, const std::
 		return 0;
 	}};
 
-	if (newcontent) DBP_PadMapping::SetInputDescriptors(true);
+	DBP_PadMapping::SetInputDescriptors(true);
 
 	// Start DOSBox thread
 	dbp_frame_pending = true;

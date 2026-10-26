@@ -324,7 +324,7 @@ struct DBP_Run
 		if (mode == RUN_VARIANT)
 		{
 			patch.enabled_variant = info;
-			DOSYMLLoader ymlload(true);
+			DOSYMLLoader ymlload(true, startup.reboot); // pass reboot to simplify (and avoid it calling DBP_PadMapping::PostYML from the emulation thread)
 			startup.reboot |= ymlload.reboot; // read startup and autoinput from YML
 			mode = startup.mode;
 			info = startup.info;
@@ -756,7 +756,7 @@ struct DBP_Run
 		{
 			const Bit32u mode = ModeHash();
 			if (InpSkipMode == mode) { } // video mode unchanged
-			else if (InpSkipMode < 31) { InpSkipMode = mode; } // initial resolution was set (before it was size 0)
+			else if (InpSkipMode == (Bit32u)vga.mode + 1) { InpSkipMode = mode; } // initial resolution was set (before it was size 0)
 			else { InpSkipMode = 0; InpNextTick = InpDoneTicks; } // new video mode
 		}
 
