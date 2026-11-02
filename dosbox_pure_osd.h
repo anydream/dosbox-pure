@@ -2522,8 +2522,7 @@ static void DBP_WheelShiftOSD(Bit8u _port, bool _on, Bit8u _shift_port = (Bit8u)
 			if (mx || my)
 			{
 				UseMouse = true;
-				int nx = PosX + mx*(int)(dbp_mouse_speed*350);
-				int ny = PosY + my*(int)(dbp_mouse_speed*350);
+				int xyfac = ((int)(dbp_mouse_speed_x > dbp_mouse_speed_y ? dbp_mouse_speed_x : dbp_mouse_speed_y)*350), nx = (PosX + mx*xyfac), ny = (PosY + my*xyfac);
 				PosX = (Bit16s)(nx > 0x7FFF ? 0x7FFF : (nx < -0x7FFF ? -0x7FFF : nx));
 				PosY = (Bit16s)(ny > 0x7FFF ? 0x7FFF : (ny < -0x7FFF ? -0x7FFF : ny));
 			}

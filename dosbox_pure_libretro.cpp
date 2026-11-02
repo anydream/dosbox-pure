@@ -1854,7 +1854,7 @@ void GFX_Events()
 				#ifdef DBP_STANDALONE
 				if (dbp_mouse_input != 'p') DBPS_GetMouse(dbp_mouse_x, dbp_mouse_y, false);
 				#endif
-				float mx = e.val*dbp_mouse_speed*dbp_mouse_speed_x, my = e.val2*dbp_mouse_speed; // good for 320x200?
+				float mx = e.val*dbp_mouse_speed_x, my = e.val2*dbp_mouse_speed_y;
 				Mouse_CursorMoved(mx, my, (dbp_mouse_x+0x7fff)/(float)0xFFFE, (dbp_mouse_y+0x7fff)/(float)0xFFFE, (dbp_mouse_input != 'd'));
 				break;
 			}
@@ -1903,8 +1903,8 @@ void GFX_Events()
 			else if (mouse_speed_up) mx *= 2, my *= 2;
 			else if (mouse_speed_down) mx *= .5f, my *= .5f;
 
-			mx *= dbp_mouse_speed * dbp_mouse_speed_x;
-			my *= dbp_mouse_speed;
+			mx *= dbp_mouse_speed_x;
+			my *= dbp_mouse_speed_y;
 			Mouse_CursorMoved(mx, my, 0, 0, true);
 		}
 		#ifdef DBP_STANDALONE
