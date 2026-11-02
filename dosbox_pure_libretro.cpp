@@ -1925,7 +1925,7 @@ void GFX_SetTitle(Bit32s cycles, int frameskip, bool paused)
 	bool was_game_running = dbp_game_running;
 	dbp_had_game_running |= (dbp_game_running = (strcmp(RunningProgram, "DOSBOX") && strcmp(RunningProgram, "PUREMENU")));
 	log_cb(RETRO_LOG_INFO, "[DOSBOX STATUS] Program: %s - Cycles: %d - Frameskip: %d - Paused: %d\n", RunningProgram, cycles, frameskip, paused);
-	if (was_game_running != dbp_game_running && DOSBox_Boot) dbp_refresh_memmaps = true;
+	if (was_game_running != dbp_game_running && (DOSBox_Boot || !strcmp(RunningProgram, "BOOT"))) dbp_refresh_memmaps = true;
 	if (cpu.pmode && CPU_CycleAutoAdjust && CPU_OldCycleMax == 3000 && CPU_CycleMax == 3000)
 	{
 		// Choose a reasonable base rate when switching to protected mode
