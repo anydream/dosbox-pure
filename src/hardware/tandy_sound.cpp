@@ -248,7 +248,7 @@ static void TandyDACGenerateDMASound(Bitu length) {
 static void TandyDACUpdate(Bitu length) {
 	if (tandy.dac.enabled && ((tandy.dac.mode&0x0c)==0x0c)) {
 		if (!tandy.dac.dma.transfer_done) {
-			Bitu len = length;
+			Bitu len = (length > TDAC_DMA_BUFSIZE ? TDAC_DMA_BUFSIZE : length);
 			TandyDACGenerateDMASound(len);
 		} else {
 			for (Bitu ct=0; ct < length; ct++) {
