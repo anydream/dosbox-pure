@@ -938,9 +938,11 @@ DBPArchiveOptional::DBPArchiveOptional(DBPArchive& ar_outer, MixerChannel* chan)
 	if (optionality != OPTIONAL_DISCARD)
 	{
 		chan->done = chan->needed = 0;
+		Callback_LockAudio();
 		mixer.pos = 0;
 		mixer.done = 0;
 		mixer.needed = mixer.min_needed+1;
+		Callback_UnlockAudio();
 	}
 }
 
