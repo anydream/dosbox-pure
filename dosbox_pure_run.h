@@ -488,6 +488,20 @@ struct DBP_Run
 			}
 			return true;
 		}
+		bool ParseVolume()
+		{
+			if ((KeyX - Key) <= 7 && strncmp("volume_", Key, 7)) return false;
+			for (int i = DBP_Option::volume_sb; i <= DBP_Option::volume_other; i++)
+			{
+				if (option_defs[i].key[19 + (KeyX - Key) - 7] != '\0' || strncmp(Key + 7, option_defs[i].key + 19, (KeyX - Key) - 7)) continue;
+				extern float dbp_volumes[6][2];
+				dbp_volumes[i-DBP_Option::volume_sb][1] = (atoi(Val) * 0.01f) - 1.0f;
+				extern void DBP_MIXER_ApplyVolumes();
+				DBP_MIXER_ApplyVolumes();
+				return true;
+			}
+			return false;
+		}
 		bool ProcessKey()
 		{
 			switch (*Key)
@@ -515,6 +529,7 @@ struct DBP_Run
 						||Parse("video_memory", "dosbox", "vmemsize", "/")
 						||Parse("video_voodoo", "pci", "voodoo" , "v1_8mb","8mb" , "v1_4mb","4mb" , "none","false" , "")
 						||Parse("video_cga_composite", "render", "cga_composite" , "true","1" , "false","2" , "")
+						||ParseVolume()
 					);
 				case 's':
 					return (0

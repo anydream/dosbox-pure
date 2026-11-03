@@ -2362,14 +2362,10 @@ static bool check_variables()
 	extern bool dbp_swapstereo;
 	dbp_swapstereo = (bool)control->GetProp("mixer", "swapstereo")->GetValue(); // to also get dosbox.conf override
 
-	extern float dbp_volume_sb, dbp_volume_midi, dbp_volume_adlib, dbp_volume_speaker, dbp_volume_cdrom, dbp_volume_other;
 	bool volumes_changed = false;
-	dbp_volume_sb      = (float)atof(DBP_Option::Get(DBP_Option::volume_sb,      &volumes_changed));
-	dbp_volume_midi    = (float)atof(DBP_Option::Get(DBP_Option::volume_midi,    &volumes_changed));
-	dbp_volume_adlib   = (float)atof(DBP_Option::Get(DBP_Option::volume_adlib,   &volumes_changed));
-	dbp_volume_speaker = (float)atof(DBP_Option::Get(DBP_Option::volume_speaker, &volumes_changed));
-	dbp_volume_cdrom   = (float)atof(DBP_Option::Get(DBP_Option::volume_cdrom,   &volumes_changed));
-	dbp_volume_other   = (float)atof(DBP_Option::Get(DBP_Option::volume_other,   &volumes_changed));
+	extern float dbp_volumes[6][2];
+	for (int i = DBP_Option::volume_sb; i <= DBP_Option::volume_other; i++)
+		dbp_volumes[i-DBP_Option::volume_sb][0] = (float)atof(DBP_Option::Get((DBP_Option::Index)i, &volumes_changed)) - 1.0f;
 	if (volumes_changed) { extern void DBP_MIXER_ApplyVolumes(); DBP_MIXER_ApplyVolumes(); }
 
 	if (dbp_state == DBPSTATE_BOOT)
