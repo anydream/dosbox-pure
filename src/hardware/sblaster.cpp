@@ -1769,9 +1769,9 @@ public:
 			OPL_ShutDown(m_configuration);
 			break;
 		}
-		if (sb.type==SBT_NONE || sb.type==SBT_GB) return;
-		DSP_Reset(); // Stop everything
 		//DBP: Added cleanup for restart support
+		if (sb.type!=SBT_NONE && sb.type!=SBT_GB)
+			DSP_Reset(); // Stop everything
 		sb.chan=0;
 	}
 }; //End of SBLASTER class
