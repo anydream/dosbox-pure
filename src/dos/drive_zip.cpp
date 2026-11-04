@@ -1614,7 +1614,7 @@ struct Zip_Handle : public DOS_File
 	{
 		//printf("[] [%s] READING %d BYTES\n", name, *size);
 		if (!OPEN_IS_READING(flags)) return FALSE_SET_DOSERR(ACCESS_DENIED);
-		if (!src->unpacker) return FALSE_SET_DOSERR(INVALID_HANDLE);
+		if (!src->unpacker) { *size = 0; return true; } // empty file
 		if (!*size) return true;
 		if (ofs >= (Bit32u)src->decomp_size) { *size = 0; return true; }
 		Bit32u left = (src->decomp_size - ofs), want = (left < *size ? left : *size);
