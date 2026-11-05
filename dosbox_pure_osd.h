@@ -2679,15 +2679,10 @@ void DBPS_ToggleOSD()
 	DBP_QueueEvent(DBPET_TOGGLEOSDUP, 0);
 }
 
-bool DBPS_IsGameRunning()
-{
-	return (dbp_game_running || (first_shell && first_shell->bf && !first_shell->bf->IsAutoexec()));
-}
-
-bool DBPS_IsShowingOSD()
-{
-	return (dbp_intercept && dbp_intercept->usegfx());
-}
+bool DBPS_IsGameRunning() { return (dbp_game_running || (first_shell && first_shell->bf && !first_shell->bf->IsAutoexec())); }
+bool DBPS_IsShowingOSD() { return (dbp_intercept && dbp_intercept->usegfx()); }
+const std::string& DBPS_GetContentName() { return dbp_content_name; }
+const std::string& DBPS_GetContentPath() { return dbp_content_path; }
 
 void DBPS_OpenContent(const char* path)
 {
@@ -2711,11 +2706,6 @@ void DBPS_OpenContent(const char* path)
 void DBPS_AddDisc(const char* path)
 {
 	DBP_Mount(DBP_AppendImage(path, false), false);
-}
-
-const std::string& DBPS_GetContentName()
-{
-	return dbp_content_name;
 }
 
 void DBPS_InitLEDs(uint16_t key_modifiers)

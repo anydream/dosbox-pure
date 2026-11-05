@@ -2874,7 +2874,13 @@ static void init_dosbox(bool forcemenu = false, bool reinit = false, const std::
 }
 
 // This is called on the main thread
-void DBP_ForceReset(bool forcemenu) { init_dosbox(forcemenu); } 
+void DBP_ForceReset(bool forcemenu)
+{
+	#ifdef DBP_STANDALONE
+	if (dbp_wasloaded) DBPS_OnReset();
+	#endif
+	init_dosbox(forcemenu);
+}
 
 void retro_init(void) //#3
 {
