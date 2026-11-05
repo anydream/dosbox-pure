@@ -517,7 +517,7 @@ struct DBP_MenuState
 #ifdef DBP_STANDALONE
 struct DBP_SettingsMenuState final : DBP_MenuState
 {
-	enum ItemType : Bit8u { IT_CANCEL = _IT_CUSTOM, IT_CATEGORIES, IT_CATEGORY, IT_OPTION, IT_TOGGLE, IT_VALUE, IT_OVERRIDE };
+	enum ItemType : Bit8u { IT_CANCEL = _IT_CUSTOM, IT_CATEGORIES, IT_CATEGORY, IT_OPTION, IT_VALUE, IT_OVERRIDE };
 	Bit8u curmenu;
 	DBP_SettingsMenuState() { menu(IT_CATEGORIES); }
 
@@ -549,7 +549,7 @@ struct DBP_SettingsMenuState final : DBP_MenuState
 				if (od.category_key != oc.key || DBP_Option::GetHidden(od)) continue;
 				if ((Bit16s)(&od - option_defs) == (curmenu == IT_CATEGORIES ? 0 : secondinfo)) setsel = (int)(list.size() + 1);
 				list.emplace_back(IT_NONE);
-				list.emplace_back((od.values[2].value ? IT_OPTION : IT_TOGGLE), (Bit16s)(&od - option_defs), (DBPS_IsConfigOverride(od.key) ? "\x6 " : "  "));
+				list.emplace_back(IT_OPTION, (Bit16s)(&od - option_defs), (DBPS_IsConfigOverride(od.key) ? "\x6 " : "  "));
 				list.back().str.append(od.desc);
 				if (od.info) AddWrappedText(66, "  ", od.info);
 			}
@@ -581,9 +581,8 @@ struct DBP_SettingsMenuState final : DBP_MenuState
 		if (res == RES_CANCEL) ok_type = IT_CANCEL;
 		if      (ok_type == IT_CATEGORY) menu(IT_CATEGORY);
 		else if (ok_type == IT_OPTION) menu(IT_OPTION);
-		else if ((ok_type == IT_NONE && curmenu == IT_CATEGORY && x_change && (list[sel].type == IT_OPTION || list[sel].type == IT_TOGGLE)) || ok_type == IT_TOGGLE)
+		else if (ok_type == IT_NONE && curmenu == IT_CATEGORY && x_change && list[sel].type == IT_OPTION)
 		{
-			if (ok_type == IT_TOGGLE) x_change = 1;
 			const retro_core_option_v2_definition& od = option_defs[list[sel].info];
 			const char* var_value = retro_get_variable(od.key, od.default_value);
 			for (const retro_core_option_value& ov : od.values)
@@ -599,6 +598,7 @@ struct DBP_SettingsMenuState final : DBP_MenuState
 		else if (ok_type == IT_VALUE)
 		{
 			Item& itsel = list[sel];
+			if (itsel.str[1] == '\x7') { menu(IT_CATEGORY); return; }
 			const retro_core_option_v2_definition& od = option_defs[list[1].info];
 			retro_variable var = { od.key, od.values[itsel.info].value };
 			if (!strcmp(var.value, od.default_value)) var.value = NULL;
@@ -656,7 +656,7 @@ struct DBP_SettingsMenuState final : DBP_MenuState
 			for (const retro_core_option_v2_definition& od : option_defs)
 			{
 				if (od.category_key && (od.category_key != oc.key || DBP_Option::GetHidden(od))) continue;
-				while (plist != plistend && (plist->type != IT_OPTION && plist->type != IT_TOGGLE)) plist++;
+				while (plist != plistend && plist->type != IT_OPTION) plist++;
 				if (od.category_key ? (plist != plistend && plist->info == (Bit16s)(&od - option_defs)) : plist == plistend) { plist++; continue; }
 				menu(IT_CATEGORY); // visibility changed, refresh
 				break;
@@ -672,7 +672,7 @@ struct DBP_SettingsMenuState final : DBP_MenuState
 		for (int i = scroll, maxw = r-l-27; i != count && i != (scroll + rows); i++)
 		{
 			Bit8u itype = list[i].type;
-			if (itype == IT_OPTION || itype == IT_TOGGLE)
+			if (itype == IT_OPTION)
 			{
 				const retro_core_option_v2_definition& od = option_defs[list[i].info];
 				const char* var_value = retro_get_variable(od.key, od.default_value);
