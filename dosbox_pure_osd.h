@@ -1567,6 +1567,7 @@ struct DBP_PureMenuState final : DBP_MenuState
 			if (exe_count) list.emplace_back(IT_NONE);
 
 			if (DBP_FullscreenOSD || (cd_count + hd_count) <= 1) setsel = (DBP_Run::patch.show_variants ? (fs_rows - 2) : (exe_count ? fs_rows : (int)dbp_images.size()));
+			else { for (int i = 0; i <= fs_rows && list[i].type == IT_MOUNT; i++) { if (dbp_images[list[i].info].mounted) { setsel = i; break; } } }
 			if (!exe_count) { list.emplace_back(IT_NONE, INFO_DIM, "No executable file found"); list.emplace_back(IT_NONE); }
 
 			if (!dbp_strict_mode) list.emplace_back(IT_COMMANDLINE, 0, "Go to Command Line");
